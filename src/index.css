@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4rem; /* Add padding for fixed navigation */
+}
+
+/* Add styles for active navigation items */
+.nav-link.active {
+  @apply text-blue-900 font-semibold;
+}
