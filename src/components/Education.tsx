@@ -3,23 +3,23 @@ import React from 'react';
 const Education = () => {
   const education = [
     {
+      degree: "PhD in Cybersecurity",
+      institution: "Rochester Institute of Technology (Golisano / Department of Cybersecurity)",
+      location: "Rochester, NY",
+      period: "Aug 2025 – Present",
+      details: [
+        "Advisor: Yinxi Liu",
+        "Focus: LLM security (inference-cost stressors / resource robustness) and software security analysis."
+      ]
+    },
+    {
       degree: "Bachelor in Computer Engineering",
       institution: "Pulchowk Campus, Tribhuvan University",
       location: "Lalitpur, Nepal",
       period: "Nov 2017 – April 2022",
       details: [
-        "Graduated with First Division honors, achieving 78.21%.",
-        "Ranked 29th out of 18,000 candidates in the 2017 entrance exam.",
+        "Graduated with First Division honors.",
         "Capstone Project: Speech Recognition in Nepali Language."
-      ]
-    },
-    {
-      degree: "High School",
-      institution: "Liverpool International College",
-      location: "Kathmandu, Nepal",
-      period: "June 2015 – June 2017",
-      details: [
-        "Graduated in the top 5 of the class with 85.8% aggregate."
       ]
     }
   ];

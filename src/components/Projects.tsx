@@ -1,31 +1,51 @@
 import React from 'react';
 import { Github } from 'lucide-react';
 
+type Project = {
+  title: string;
+  description: string[];
+  repository?: string;
+};
+
 const Projects = () => {
-  const projects = [
+  const projects: Project[] = [
     {
-      title: "Automatic Speech Recognition for the Nepali Language",
+      title: "ContamBench",
       description: [
-        "Developed a state-of-the-art deep learning model using CNN, LSTM, and ResNet.",
-        "Achieved a Character Error Rate (CER) of 17.06%.",
-        "Deployed a web interface for testing and built a chatbot for domain-specific question answering.",
-        "Enhanced accuracy with Transfer Learning using the wav2vec transformer model."
-      ],
-      repository: "https://github.com/manishdhakal/ASR-Nepali-using-CNN-BiLSTM-ResNet"
+        "Contamination stress dataset and CLIs for open-weight LLM serving stacks.",
+        "Supports measurement of inference-cost behavior under contaminated or adversarial-style workloads.",
+        "Used in cross-model and cross-configuration inference-cost evaluation."
+      ]
+    },
+    {
+      title: "Metamorphic VLM Stress Testing",
+      description: [
+        "Metamorphic stress tests for vision-language components in time-critical settings.",
+        "Focuses on timing and behavior contracts rather than accuracy alone.",
+        "Aligned with TRUST '26 work on autonomous-system VLM robustness."
+      ]
+    },
+    {
+      title: "Constant-Time Verification (CT_Prover)",
+      description: [
+        "Software security analysis for constant-time properties in cryptographic code.",
+        "Observation-directed relational slicing applied to libraries such as BearSSL RSA.",
+        "Uses Boogie, Z3, and SMACK/BAM in the verification workflow. Advisor: Yinxi Liu."
+      ]
     },
     {
       title: "Distributed Filestore",
       description: [
-        "Implemented a distributed filestore from scratch in Go.",
-        "Allows file storage and retrieval from any node in the system."
+        "Distributed file storage implemented in Go.",
+        "Supports store and retrieve operations from any node in the system."
       ],
       repository: "https://github.com/armanchhetri/distributed-filestore"
     },
     {
       title: "HTTP Server",
       description: [
-        "Built a simplified version of Go's `net/http` library from scratch.",
-        "Implemented a custom multiplexer using Trie data structure."
+        "Simplified HTTP server inspired by Go's net/http package.",
+        "Custom request multiplexer based on a Trie."
       ],
       repository: "https://github.com/armanchhetri/http-server"
     }
@@ -44,14 +64,16 @@ const Projects = () => {
                   <li key={i} className="text-gray-700">{desc}</li>
                 ))}
               </ul>
-              <a
-                href={project.repository}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800"
-              >
-                <Github size={20} /> View on GitHub
-              </a>
+              {project.repository && (
+                <a
+                  href={project.repository}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                >
+                  <Github size={20} /> View on GitHub
+                </a>
+              )}
             </div>
           ))}
         </div>
