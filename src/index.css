@@ -2,12 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 4rem; /* Add padding for fixed navigation */
+:root {
+  color-scheme: light;
 }
 
-/* Add styles for active navigation items */
-.nav-link.active {
-  @apply text-blue-900 font-semibold;
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  @apply bg-paper font-sans text-ink antialiased;
+  background-image:
+    radial-gradient(ellipse at top, rgba(36, 48, 68, 0.035), transparent 46%),
+    linear-gradient(180deg, #f6f4ee 0%, #f3f1eb 220px);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: #d8e0ea;
+  color: #1c2430;
+}
+
+@layer components {
+  .page-wrap {
+    @apply mx-auto w-full max-w-page px-5 sm:px-8;
+  }
+
+  .section-kicker {
+    @apply mb-3 font-sans text-[0.72rem] font-semibold uppercase tracking-label text-ink-faint;
+  }
+
+  .section-title {
+    @apply font-serif text-3xl font-semibold tracking-tight text-ink sm:text-[2rem];
+  }
+
+  .hairline {
+    @apply border-rule/80;
+  }
+
+  .text-link {
+    @apply text-accent underline decoration-rule underline-offset-[3px] transition-colors hover:text-accent-hover hover:decoration-accent;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy;
+  }
 }

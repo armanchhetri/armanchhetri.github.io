@@ -1,67 +1,117 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
+import { Menu, X } from 'lucide-react';
+import { navItems, profile } from '../content';
 
 const Navigation = () => {
-  const navItems = [
-    { label: 'Experience', href: '#experience' },
-    { label: 'Projects', href: '#projects' },
-    { label: 'Skills', href: '#skills' },
-    { label: 'Education', href: '#education' },
-    { label: 'Publications', href: '#publications' },
-    { label: 'Certifications', href: '#certifications' },
-    { label: 'Affiliations', href: '#affiliations' },
-  ];
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState('');
+
+  useEffect(() => {
+    const ids = navItems.map((item) => item.href.slice(1));
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+        if (visible[0]?.target.id) {
+          setActive(visible[0].target.id);
+        }
+      },
+      { rootMargin: '-20% 0px -65% 0px', threshold: [0.1, 0.25, 0.5] }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <a href="#top" className="text-xl font-bold text-blue-900">
-            AC
+    <header className="sticky top-0 z-50 border-b border-rule/70 bg-paper/90 backdrop-blur-md">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:bg-paper focus:px-3 focus:py-2 focus:text-sm">
+        Skip to content
+      </a>
+      <nav className="page-wrap" aria-label="Primary">
+        <div className="flex h-[4.25rem] items-center justify-between gap-4">
+          <a href="#top" className="focus-ring font-serif text-lg font-semibold tracking-tight text-ink">
+            {profile.name}
           </a>
-          <div className="hidden md:flex space-x-4">
+
+          <div className="hidden items-center gap-1 lg:flex">
+            {navItems.map((item) => {
+              const isActive = active === item.href.slice(1);
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`focus-ring rounded-sm px-2.5 py-1.5 text-[0.8rem] tracking-wide ${
+                    isActive
+                      ? 'font-semibold text-ink'
+                      : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
+            <a
+              href={profile.cvHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="focus-ring ml-2 border border-navy px-3 py-1.5 text-[0.8rem] font-semibold tracking-wide text-navy hover:bg-navy hover:text-paper"
+            >
+              CV
+            </a>
+          </div>
+
+          <button
+            type="button"
+            className="focus-ring -mr-1 p-2 text-ink lg:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+
+        {open && (
+          <div id="mobile-menu" className="border-t border-rule/80 pb-5 pt-2 lg:hidden">
             {navItems.map((item) => (
               <a
-                key={item.label}
+                key={item.href}
                 href={item.href}
-                className="text-gray-600 hover:text-blue-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="focus-ring block py-2.5 text-base text-ink-muted hover:text-ink"
+                onClick={() => setOpen(false)}
               >
                 {item.label}
               </a>
             ))}
-          </div>
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              type="button"
-              className="text-gray-600 hover:text-blue-900"
-              onClick={() => {
-                const menu = document.getElementById('mobile-menu');
-                menu?.classList.toggle('hidden');
-              }}
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Mobile menu */}
-        <div id="mobile-menu" className="hidden md:hidden pb-4">
-          {navItems.map((item) => (
             <a
-              key={item.label}
-              href={item.href}
-              className="block text-gray-600 hover:text-blue-900 px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => {
-                document.getElementById('mobile-menu')?.classList.add('hidden');
-              }}
+              href={profile.cvHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="focus-ring mt-3 inline-block border border-navy px-3 py-1.5 text-sm font-semibold text-navy"
             >
-              {item.label}
+              CV (PDF)
             </a>
-          ))}
-        </div>
-      </div>
-    </nav>
+          </div>
+        )}
+      </nav>
+    </header>
   );
 };
 

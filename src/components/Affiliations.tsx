@@ -1,47 +1,33 @@
-import React from 'react';
-import { Users } from 'lucide-react';
+import { affiliations } from '../content';
+import Section from './Section';
 
 const Affiliations = () => {
-  const affiliations = [
-    {
-      organization: "Microsoft Learn Student Ambassadors",
-      year: 2019
-    },
-    {
-      organization: "LOCUS",
-      roles: ["Datarush Contest Organizer (2021)", "Children in Tech Organizer (2021)"]
-    },
-    {
-      organization: "ANSWER Scholar",
-      period: "2012–2022"
-    }
-  ];
-
   return (
-    <section className="py-16 bg-white">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">Affiliations</h2>
-        <div className="space-y-6">
-          {affiliations.map((affiliation, index) => (
-            <div key={index} className="bg-gray-50 p-6 rounded-lg flex items-start gap-4">
-              <Users className="text-blue-600 mt-1" size={24} />
-              <div>
-                <h3 className="text-xl font-semibold">{affiliation.organization}</h3>
-                {affiliation.year && <p className="text-gray-600">Year: {affiliation.year}</p>}
-                {affiliation.period && <p className="text-gray-600">Period: {affiliation.period}</p>}
-                {affiliation.roles && (
-                  <ul className="list-disc list-inside mt-2">
-                    {affiliation.roles.map((role, i) => (
-                      <li key={i} className="text-gray-700">{role}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+    <Section id="affiliations" kicker="07" title="Affiliations">
+      <ul className="space-y-8">
+        {affiliations.map((affiliation) => (
+          <li key={affiliation.organization} className="grid gap-1 sm:grid-cols-[13.5rem_minmax(0,1fr)] sm:gap-10">
+            <p className="text-sm font-medium text-ink-muted">
+              {affiliation.year
+                ? String(affiliation.year)
+                : affiliation.period ?? ''}
+            </p>
+            <div>
+              <h3 className="font-serif text-xl font-semibold text-ink">
+                {affiliation.organization}
+              </h3>
+              {affiliation.roles && (
+                <ul className="mt-2 space-y-1 text-[0.97rem] text-ink-muted">
+                  {affiliation.roles.map((role) => (
+                    <li key={role}>{role}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 };
 

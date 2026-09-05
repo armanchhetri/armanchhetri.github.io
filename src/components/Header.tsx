@@ -1,38 +1,53 @@
-import React from 'react';
-import { Github, Linkedin, Mail, Globe, FileText } from 'lucide-react';
+import { FileText, Github, Globe, Linkedin, Mail } from 'lucide-react';
+import { profile } from '../content';
 
 const Header = () => {
+  const contacts = [
+    { href: profile.site, label: profile.siteLabel, icon: Globe, external: true },
+    { href: `mailto:${profile.email}`, label: profile.email, icon: Mail, external: false },
+    { href: profile.linkedin, label: 'LinkedIn', icon: Linkedin, external: true },
+    { href: profile.github, label: 'GitHub', icon: Github, external: true },
+    { href: profile.cvHref, label: 'CV (PDF)', icon: FileText, external: true },
+  ];
+
   return (
-    <header className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white py-20">
-      <div className="container mx-auto px-4">
-        <h1 className="text-5xl font-bold mb-4">Arman Chhetri</h1>
-        <p className="text-xl mb-2">PhD Student in Cybersecurity</p>
-        <p className="text-lg text-blue-100 mb-4">
-          Golisano College of Computing and Information Sciences · Department of Cybersecurity · Rochester Institute of Technology
-        </p>
-        <p className="text-base text-blue-50 mb-2 max-w-3xl">
-          Research on LLM security—especially inference-cost stressors and resource robustness—and software security analysis.
-        </p>
-        <p className="text-base text-blue-100 mb-6">Advisor: Yinxi Liu</p>
-        <div className="flex flex-wrap gap-4">
-          <a href="https://armanchhetri.com.np" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-blue-300">
-            <Globe size={20} /> armanchhetri.com.np
-          </a>
-          <a href="mailto:ac7240@rit.edu" className="flex items-center gap-2 hover:text-blue-300">
-            <Mail size={20} /> ac7240@rit.edu
-          </a>
-          <a href="https://linkedin.com/in/arman-chhetri" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-blue-300">
-            <Linkedin size={20} /> LinkedIn
-          </a>
-          <a href="https://github.com/armanchhetri" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-blue-300">
-            <Github size={20} /> GitHub
-          </a>
-          <a href="/CV.pdf" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-blue-300">
-            <FileText size={20} /> CV (PDF)
-          </a>
+    <section className="border-b border-rule/80 py-16 sm:py-20">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-end lg:gap-16">
+        <div>
+          <p className="section-kicker">Rochester Institute of Technology</p>
+          <h1 className="font-serif text-[2.65rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-6xl">
+            {profile.name}
+          </h1>
+          <p className="mt-5 text-lg text-ink sm:text-xl">{profile.role}</p>
+          <p className="mt-3 max-w-xl text-[0.98rem] leading-relaxed text-ink-muted">
+            {profile.affiliation}
+          </p>
+        </div>
+
+        <div className="border-t border-rule/80 pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0">
+          <p className="section-kicker">Research</p>
+          <p className="max-w-xl font-serif text-xl leading-snug text-ink sm:text-[1.35rem]">
+            {profile.research}
+          </p>
+          <p className="mt-5 text-sm text-ink-muted">Advisor: {profile.advisor}</p>
         </div>
       </div>
-    </header>
+
+      <ul className="mt-12 flex flex-wrap gap-x-6 gap-y-3 border-t border-rule/80 pt-6 text-sm text-ink-muted">
+        {contacts.map(({ href, label, icon: Icon, external }) => (
+          <li key={label}>
+            <a
+              href={href}
+              className="focus-ring inline-flex items-center gap-2 hover:text-ink"
+              {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              <Icon size={16} strokeWidth={1.6} aria-hidden="true" />
+              {label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 };
 

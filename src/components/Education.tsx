@@ -1,49 +1,30 @@
-import React from 'react';
+import { education } from '../content';
+import Section from './Section';
 
 const Education = () => {
-  const education = [
-    {
-      degree: "PhD in Cybersecurity",
-      institution: "Rochester Institute of Technology (Golisano / Department of Cybersecurity)",
-      location: "Rochester, NY",
-      period: "Aug 2025 – Present",
-      details: [
-        "Advisor: Yinxi Liu",
-        "Focus: LLM security (inference-cost stressors / resource robustness) and software security analysis."
-      ]
-    },
-    {
-      degree: "Bachelor in Computer Engineering",
-      institution: "Pulchowk Campus, Tribhuvan University",
-      location: "Lalitpur, Nepal",
-      period: "Nov 2017 – April 2022",
-      details: [
-        "Graduated with First Division honors.",
-        "Capstone Project: Speech Recognition in Nepali Language."
-      ]
-    }
-  ];
-
   return (
-    <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">Education</h2>
-        <div className="space-y-8">
-          {education.map((edu, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-semibold">{edu.degree}</h3>
-              <p className="text-gray-600">{edu.institution}</p>
-              <p className="text-gray-500 mb-2">{edu.period}</p>
-              <ul className="list-disc list-inside space-y-1">
-                {edu.details.map((detail, i) => (
-                  <li key={i} className="text-gray-700">{detail}</li>
+    <Section id="education" kicker="02" title="Education">
+      <div className="space-y-10">
+        {education.map((edu) => (
+          <article key={edu.degree} className="grid gap-3 md:grid-cols-[13.5rem_minmax(0,1fr)] md:gap-10">
+            <p className="text-sm font-medium text-ink-muted md:pt-1">{edu.period}</p>
+            <div>
+              <h3 className="font-serif text-xl font-semibold text-ink">{edu.degree}</h3>
+              <p className="mt-1 text-[0.95rem] text-ink-muted">{edu.institution}</p>
+              <p className="text-sm text-ink-faint">{edu.location}</p>
+              <ul className="mt-4 space-y-2 text-[0.97rem] leading-relaxed text-ink-muted">
+                {edu.details.map((detail) => (
+                  <li key={detail} className="flex gap-3">
+                    <span aria-hidden="true" className="mt-[0.55rem] h-1 w-1 flex-shrink-0 rounded-full bg-ink-faint" />
+                    <span>{detail}</span>
+                  </li>
                 ))}
               </ul>
             </div>
-          ))}
-        </div>
+          </article>
+        ))}
       </div>
-    </section>
+    </Section>
   );
 };
 
