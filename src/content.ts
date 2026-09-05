@@ -158,6 +158,30 @@ export const projects: Project[] = [
       'Used in cross-model and cross-configuration inference-cost evaluation.',
     ],
   },
+  {
+    title: 'Build Git from scratch',
+    description: [
+      'Small version of Git implemented from scratch in Go.',
+      'Recreates core version-control operations from first principles.',
+    ],
+    repository: 'https://github.com/armanchhetri/build-your-own-git',
+  },
+  {
+    title: 'Distributed Filestore',
+    description: [
+      'Flat file store distributed across multiple nodes (Go).',
+      'Store and retrieve files across nodes.',
+    ],
+    repository: 'https://github.com/armanchhetri/distributed-filestore',
+  },
+  {
+    title: 'Interpreter from scratch',
+    description: [
+      'Lox interpreter implemented from scratch in Rust.',
+      'Builds the core interpreter pipeline for the Lox language.',
+    ],
+    repository: 'https://github.com/armanchhetri/Interpreter-from-scratch',
+  },
 ];
 
 export const skills = {
