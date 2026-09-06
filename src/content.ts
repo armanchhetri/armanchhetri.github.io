@@ -122,7 +122,7 @@ export const publications: Publication[] = [
     title:
       'Metamorphic Stress Testing of Vision-Language Components for Time-Critical Autonomous Systems',
     authors: 'Arman Chhetri, Yinxi Liu',
-    venue: "TRUST '26 @ ASE 2026",
+    venue: "TRUST '26 workshop (co-located with ASE 2026)",
     year: 2026,
     doi: '10.1145/3843782.3844660',
   },
@@ -130,7 +130,7 @@ export const publications: Publication[] = [
     title:
       'When Do Inference-Cost Stress Tests Generalize? A Cross-Model and Cross-Configuration Measurement Study',
     authors: 'Arman Chhetri, Yinxi Liu',
-    venue: "RASE '26 @ ASE 2026",
+    venue: "RASE '26 workshop (co-located with ASE 2026)",
     year: 2026,
     doi: '10.1145/3820756.3844910',
   },
