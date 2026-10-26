@@ -3,7 +3,7 @@ import Section from './Section';
 
 const Experience = () => {
   return (
-    <Section id="experience" kicker="03" title="Experience">
+    <Section id="experience" kicker="04" title="Experience">
       <ol>
         {experiences.map((exp, index) => (
           <li

@@ -19,6 +19,9 @@ const Publications = () => {
                 <p className="mt-2 text-[0.95rem] text-ink-muted">{pub.authors}</p>
               )}
               <p className="mt-1 text-[0.95rem] italic text-ink-muted">{pub.venue}</p>
+              {pub.award && (
+                <p className="mt-2 text-[0.95rem] font-semibold text-ink">{pub.award}</p>
+              )}
               {pub.doi && (
                 <a
                   href={`https://doi.org/${pub.doi}`}

@@ -3,7 +3,7 @@ import Section from './Section';
 
 const Education = () => {
   return (
-    <Section id="education" kicker="02" title="Education">
+    <Section id="education" kicker="03" title="Education">
       <div className="space-y-10">
         {education.map((edu) => (
           <article key={edu.degree} className="grid gap-3 md:grid-cols-[13.5rem_minmax(0,1fr)] md:gap-10">

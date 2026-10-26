@@ -115,6 +115,7 @@ export type Publication = {
   venue: string;
   year: number;
   doi?: string;
+  award?: string;
 };
 
 export const publications: Publication[] = [
@@ -133,6 +134,7 @@ export const publications: Publication[] = [
     venue: "RASE '26 workshop (co-located with ASE 2026)",
     year: 2026,
     doi: '10.1145/3820756.3844910',
+    award: 'Best Paper Award',
   },
   {
     title:
@@ -140,6 +142,24 @@ export const publications: Publication[] = [
     venue: '2022 International Conference on Inventive Computation Technologies (ICICT)',
     year: 2022,
     doi: '10.1109/ICICT54344.2022.9850832',
+  },
+];
+
+export type Award = {
+  title: string;
+  venue: string;
+  date: string;
+  details: string;
+};
+
+export const awards: Award[] = [
+  {
+    title: 'Best Paper Award',
+    venue:
+      'RASE 2026 · 1st IEEE/ACM International Workshop on Reliable and Trustworthy Automated Software Engineering (co-located with ASE 2026, Munich)',
+    date: 'Oct 2026',
+    details:
+      'For the workshop paper “When Do Inference-Cost Stress Tests Generalize? A Cross-Model and Cross-Configuration Measurement Study” (Arman Chhetri, Yinxi Liu).',
   },
 ];
 
@@ -239,6 +259,7 @@ export const affiliations: Affiliation[] = [
 
 export const navItems = [
   { label: 'Publications', href: '#publications' },
+  { label: 'Awards', href: '#awards' },
   { label: 'Education', href: '#education' },
   { label: 'Experience', href: '#experience' },
   { label: 'Projects', href: '#projects' },

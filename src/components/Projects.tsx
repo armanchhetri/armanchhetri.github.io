@@ -3,7 +3,7 @@ import Section from './Section';
 
 const Projects = () => {
   return (
-    <Section id="projects" kicker="04" title="Projects">
+    <Section id="projects" kicker="05" title="Projects">
       <div className="space-y-10">
         {projects.map((project) => (
           <article key={project.title} className="max-w-3xl">

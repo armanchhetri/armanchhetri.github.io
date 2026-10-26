@@ -1,4 +1,5 @@
 import Affiliations from './components/Affiliations';
+import Awards from './components/Awards';
 import Certifications from './components/Certifications';
 import Education from './components/Education';
 import Experience from './components/Experience';
@@ -19,6 +20,7 @@ function App() {
         </div>
         <main id="main">
           <Publications />
+          <Awards />
           <Education />
           <Experience />
           <Projects />

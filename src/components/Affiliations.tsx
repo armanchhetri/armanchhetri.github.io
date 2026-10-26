@@ -3,7 +3,7 @@ import Section from './Section';
 
 const Affiliations = () => {
   return (
-    <Section id="affiliations" kicker="07" title="Affiliations">
+    <Section id="affiliations" kicker="08" title="Affiliations">
       <ul className="space-y-8">
         {affiliations.map((affiliation) => (
           <li key={affiliation.organization} className="grid gap-1 sm:grid-cols-[13.5rem_minmax(0,1fr)] sm:gap-10">
