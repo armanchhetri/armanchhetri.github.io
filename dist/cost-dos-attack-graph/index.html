@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cost-DoS Attack Graph</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a pannable attack graph (lanes = parallel subsystems, spine = vLLM request path) beside a detail panel; tabs for paths, coverage, catalog. */
+:root{
+  color-scheme: light;
+  --page:#f6f7f8; --surface:#fdfdfd; --surface-2:#eef0f2; --ink:#101418; --ink-2:#4a535c; --muted:#7c858e;
+  --line:#dde1e5; --line-2:#bfc6cc; --accent:#2a78d6; --accent-soft:rgba(42,120,214,.12);
+  --spine:#101418; --lane-a:#eef3f7; --lane-t:#f5f1ea; --lane-s:#f2f5f9; --lane-e:#f1f4ef; --lane-r:#f4f4f4; --lane-v:#f7eeee;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; --s0:#898781;
+  --good:#0ca30c; --warn:#d99a00; --crit:#d03b3b; --good-bg:#e3f4e3; --warn-bg:#fdf1d6; --crit-bg:#f8e1e1;
+  --f-display:"Space Grotesk", system-ui, sans-serif; --f-body:Inter, system-ui, -apple-system, "Segoe UI", sans-serif; --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --page:#0e1013; --surface:#171a1e; --surface-2:#22262b; --ink:#eef0f2; --ink-2:#b9c0c7; --muted:#8a939b;
+    --line:#2b3036; --line-2:#3c434a; --accent:#4a93ea; --accent-soft:rgba(74,147,234,.18);
+    --spine:#eef0f2; --lane-a:#151b22; --lane-t:#1c1912; --lane-s:#13171c; --lane-e:#161b15; --lane-r:#18191a; --lane-v:#1f1516;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767; --s0:#898781;
+    --good-bg:#16301a; --warn-bg:#3a2f12; --crit-bg:#3a1b1b;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0e1013; --surface:#171a1e; --surface-2:#22262b; --ink:#eef0f2; --ink-2:#b9c0c7; --muted:#8a939b;
+  --line:#2b3036; --line-2:#3c434a; --accent:#4a93ea; --accent-soft:rgba(74,147,234,.18);
+  --spine:#eef0f2; --lane-a:#151b22; --lane-t:#1c1912; --lane-s:#13171c; --lane-e:#161b15; --lane-r:#18191a; --lane-v:#1f1516;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767; --s0:#898781;
+  --good-bg:#16301a; --warn-bg:#3a2f12; --crit-bg:#3a1b1b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14.5px/1.5 var(--f-body);overflow-x:hidden}
+a{color:var(--accent)}
+.wrap{max-width:1500px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{padding-block:22px 0}
+h1{font-family:var(--f-display);font-size:26px;letter-spacing:-.01em;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--ink-2);max-width:70ch;margin:0 0 12px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:12.5px;color:var(--ink-2)}
+.stat b{color:var(--ink);font-variant-numeric:tabular-nums}
+nav.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav.tabs button{font:600 13.5px var(--f-body);background:none;border:0;border-bottom:2px solid transparent;padding:8px 11px;color:var(--ink-2);cursor:pointer}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible,.tg:focus-visible,.fam:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.themebtn{margin-left:auto;font:13px var(--f-body);background:var(--surface);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer;align-self:center}
+main{padding-block:14px 60px}
+.controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.fam,.tg{display:inline-flex;align-items:center;gap:6px;font:12.5px var(--f-body);padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.fam[aria-pressed="false"]{opacity:.4}
+.tg[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c);display:inline-block}
+.hint{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+
+.gridmain{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media (max-width:1050px){.gridmain{grid-template-columns:minmax(0,1fr)}}
+.graphbox{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;height:min(78vh,860px);min-height:420px;touch-action:none}
+.graphbox svg{width:100%;height:100%;display:block;cursor:grab}
+.graphbox:fullscreen{height:100vh;border-radius:0;border:0}
+.graphbox.expanded{position:fixed;inset:0;z-index:50;height:100%;min-height:0;border-radius:0;border:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+body.noscroll{overflow:hidden}
+.zoombtns{position:absolute;right:calc(10px + env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:4px}
+.zoombtns button{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px var(--f-body);cursor:pointer}
+.keyrow{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-2);margin:8px 0 0}
+.keyrow span{display:inline-flex;align-items:center;gap:6px}
+.keyrow svg{overflow:visible}
+
+/* svg */
+.lane-rect{stroke:var(--line);stroke-width:1}
+.lane-t1{font:600 15px var(--f-display);fill:var(--ink-2)}
+.lane-t2{font:12px var(--f-body);fill:var(--muted)}
+.sec rect{fill:var(--surface);stroke:var(--line-2);stroke-width:1.2}
+.sec.spine rect{stroke:var(--spine);stroke-width:2}
+.sec.victim rect{stroke-dasharray:4 3}
+.sec.related rect{stroke-dasharray:3 3;fill:var(--surface-2)}
+.sec text.n{font:600 13px var(--f-display);fill:var(--ink)}
+.sec text.k{font:500 10px var(--f-mono);fill:var(--muted)}
+.sec{cursor:pointer}
+.sedge{fill:none;stroke:var(--line-2)}
+.sedge.flow{stroke:var(--ink-2);opacity:.55}
+.sedge.loop{stroke:var(--ink-2);opacity:.45;stroke-dasharray:6 4}
+.sedge.load{stroke:var(--s4);opacity:.7;stroke-dasharray:2 3}
+.sedge.faint{stroke:var(--line-2);opacity:.7;stroke-dasharray:3 4}
+.ecount{font:600 10.5px var(--f-mono);fill:var(--ink-2)}
+.ecount-bg{fill:var(--surface);stroke:var(--line)}
+.elabel{font:11px var(--f-body);fill:var(--muted);font-style:italic}
+.pedge{fill:none;stroke-width:1;opacity:.16}
+.pedge.def{stroke:var(--good)}
+.pedge.def.fails{stroke:var(--crit);stroke-dasharray:3 3}
+.pedge.faint{stroke-dasharray:2 4;opacity:.25}
+.pedge.vic{stroke:var(--crit);opacity:0;stroke-dasharray:1 3}
+.showvic .pedge.vic{opacity:.22}
+.node{cursor:pointer}
+.node text{font:11.5px var(--f-body);fill:var(--ink)}
+.node.faint text{fill:var(--muted)}
+.node.faint circle{fill:var(--surface)!important;stroke-width:1.6}
+.node .sq{fill:var(--surface);stroke-width:2}
+.node .x{font:700 11px var(--f-body);fill:var(--crit)}
+.nolabels .node text.nlbl{display:none}
+.hidefaint .isfaint{display:none}
+svg.dim .sec, svg.dim .node, svg.dim .sedge, svg.dim .ecount-g{opacity:.15}
+svg.dim .pedge{opacity:.04}
+svg.dim .hl{opacity:1!important}
+svg.dim .pedge.hl{opacity:.85!important;stroke-width:1.6}
+svg.dim .sedge.hl{opacity:1!important;stroke:var(--accent)}
+.sec.hl rect{stroke:var(--accent);stroke-width:2.5}
+.node.sel text{font-weight:700}
+.sedge.dom{stroke:var(--accent);opacity:.95}
+.domglow{fill:none;stroke:var(--accent-soft);stroke-linecap:round}
+
+aside.detail{position:sticky;top:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;max-height:calc(100vh - 24px);overflow:auto;min-width:0}
+@media (max-width:1050px){aside.detail{position:static;max-height:none}}
+aside h2{font:600 18px var(--f-display);margin:0 0 2px;text-wrap:balance}
+aside .meta{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+aside h3{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 4px}
+aside p{margin:0 0 6px;font-size:13.5px}
+.note{background:var(--surface-2);border-left:3px solid var(--accent);padding:8px 10px;border-radius:0 6px 6px 0;font-size:13px}
+.note.repo{border-left-color:var(--crit)}
+.pill{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);margin:0 4px 4px 0}
+.pill.good{background:var(--good-bg)} .pill.warn{background:var(--warn-bg)} .pill.crit{background:var(--crit-bg)}
+.pathviz{display:flex;flex-wrap:wrap;gap:3px;align-items:center;font-size:12px}
+.pathviz span.s{padding:2px 7px;border:1px solid var(--line-2);border-radius:5px;background:var(--surface)}
+.pathviz span.s.amp{border-color:var(--crit);border-style:dashed;font-weight:600}
+.pathviz span.a{color:var(--muted)}
+ul.lst{list-style:none;padding:0;margin:0}
+ul.lst li{font-size:13px;padding:4px 0;border-bottom:1px solid var(--line)}
+ul.lst li:last-child{border-bottom:0}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-align:left}
+
+/* tables / other tabs */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);font-size:13px}
+th{font-size:11.5px;color:var(--ink-2);background:var(--surface-2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.cov td.cell{min-width:150px;font-size:12px;color:var(--ink-2)}
+.cov td.v2{background:var(--good-bg)} .cov td.v1{background:var(--warn-bg)} .cov td.v0{background:var(--crit-bg)}
+.cov .v{font-weight:700;color:var(--ink);font-size:12px}
+.basis{font:600 10px var(--f-mono);border:1px solid var(--line-2);border-radius:4px;padding:0 4px;color:var(--ink-2)}
+.cov th.fh{min-width:200px;white-space:normal}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
+.panel h2{font:600 17px var(--f-display);margin:0 0 4px}
+.panel p.d{color:var(--ink-2);font-size:13px;margin:0 0 10px;max-width:70ch}
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:150px minmax(0,1fr) 36px;gap:8px;align-items:center;font-size:12.5px;cursor:pointer}
+.bar .track{height:14px;background:var(--surface-2);border-radius:4px;position:relative;overflow:hidden}
+.bar .fill{position:absolute;left:0;top:0;height:7px;background:var(--accent);border-radius:0 4px 4px 0}
+.bar .fill2{position:absolute;left:0;top:7px;height:7px;background:var(--s2);border-radius:0 4px 4px 0;opacity:.9}
+.bar .num{font:600 12px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.domlist{font-size:13px}
+.kind{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.kind.attack{color:var(--crit)} .kind.defense{color:var(--good)} .kind.faint{color:var(--muted)}
+input[type=search],select{font:13.5px var(--f-body);padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+input[type=search]{flex:1;min-width:180px;max-width:320px}
+.prose{max-width:76ch}
+.prose h2{font:600 18px var(--f-display);margin:20px 0 6px}
+.prose p,.prose li{color:var(--ink-2)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Cost-DoS attack graph for LLM serving</h1>
+  <p class="sub">Attacks, defenses and victims as a directed graph. The middle spine is the request path into an inference engine such as vLLM. Agent clients, training, embodied systems and faintly related work run as parallel lanes that feed into it. Edge thickness counts how many attack papers travel that edge.</p>
+  <div class="stats" id="stats"></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="graph" aria-selected="true">Graph</button>
+    <button role="tab" data-tab="paths" aria-selected="false">Paths & victims</button>
+    <button role="tab" data-tab="cov" aria-selected="false">Coverage</button>
+    <button role="tab" data-tab="cat" aria-selected="false">Catalog</button>
+    <button role="tab" data-tab="read" aria-selected="false">How to read</button>
+    <button class="themebtn" id="themebtn" type="button">Theme</button>
+  </nav>
+</header>
+<main>
+  <section id="tab-graph">
+    <div class="controls" id="famfilter"><span class="lbl">Families</span></div>
+    <div class="controls">
+      <span class="lbl">Show</span>
+      <button class="tg" id="tgDom" aria-pressed="false">Dominant attack path</button>
+      <button class="tg" id="tgVic" aria-pressed="false">Victim links</button>
+      <button class="tg" id="tgFaint" aria-pressed="true">Faint relations</button>
+      <button class="tg" id="tgLbl" aria-pressed="true">Labels</button>
+    </div>
+    <p class="hint">Click any node (section, paper, defense or victim) to trace its connections. Drag to pan, scroll or pinch to zoom, Esc to clear.</p>
+    <div class="gridmain">
+      <div style="min-width:0">
+        <div class="graphbox" id="graphbox">
+          <svg id="svg" role="img" aria-label="Directed graph of LLM cost-DoS attacks, serving sections, defenses and victims"></svg>
+          <div class="zoombtns"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" aria-label="Fit graph to view" title="Fit to view">◎</button><button id="zfull" aria-label="Full screen" title="Full screen">⤢</button></div>
+        </div>
+        <div class="keyrow" id="keyrow"></div>
+      </div>
+      <aside class="detail" id="detail" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section id="tab-paths" hidden>
+    <div class="two">
+      <div class="panel">
+        <h2>Dominant attack path</h2>
+        <p class="d">The path through the section graph that carries the most attack traffic: the sum over its edges of how many attack papers use each edge. Loop edges are excluded. A defense on this path sees the most attacks.</p>
+        <div id="dompath"></div>
+      </div>
+      <div class="panel">
+        <h2>Chokepoints</h2>
+        <p class="d">How many attack papers pass through each section (blue) and how many amplify their cost there (orange). Click a row to select it on the graph.</p>
+        <div class="bars" id="chokebars"></div>
+      </div>
+      <div class="panel">
+        <h2>Best path from each entry point</h2>
+        <p class="d">Parallel lanes have their own heaviest path before they merge into the spine.</p>
+        <div id="srcpaths"></div>
+      </div>
+      <div class="panel">
+        <h2>Who pays</h2>
+        <p class="d">Victims of each attack. Many papers report only token counts, which measures the provider's cost. Few measure harm to OTHER users.</p>
+        <div id="victimlist"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-cov" hidden>
+    <p class="hint">How well defenses at each section handle each attack family. <span class="basis">E</span> evidence from a paper, <span class="basis">A</span> our untested assessment. Empty means not relevant.</p>
+    <div class="scroll"><table class="cov" id="covtable"></table></div>
+  </section>
+
+  <section id="tab-cat" hidden>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search names, mechanisms, notes">
+      <select id="fkind"><option value="">All kinds</option><option value="attack">Attacks</option><option value="defense">Defenses</option><option value="faint">Faint / other domains</option></select>
+      <select id="ffam"><option value="">All families</option></select>
+      <select id="fsec"><option value="">All sections</option></select>
+      <select id="fsrc"><option value="">Any source</option><option value="read">Read in full</option><option value="abs">Abstract only</option></select>
+    </div>
+    <div class="hint" id="catcount"></div>
+    <div class="scroll"><table id="cattable"></table></div>
+  </section>
+
+
+  <section id="tab-read" hidden>
+    <div class="prose">
+      <h2>Reading the graph</h2>
+      <ul>
+        <li><b>Section nodes</b> (rounded boxes) are parts of the system. The thick-bordered ones on the spine are the inference engine path: gateway → admission → scheduler → execution → decode.</li>
+        <li><b>Lanes</b> are parallel subsystems. Agent clients sit outside the engine and send requests into it. Training changes the weights the engine loads. Embodied systems may call a served model. The related lane holds work that is not compute DoS.</li>
+        <li><b>Attack papers</b> (dots, colored by family) link to the section where they enter and the sections where they amplify cost. Hollow dots are faintly related work.</li>
+        <li><b>Defenses</b> (squares) link to the sections they act on. Green border: cheap at high request rates. Amber: moderate. Red: needs an extra LLM call. ✗ marks defenses that were tested and failed.</li>
+        <li><b>Victims</b> along the bottom show who pays. Turn on "Victim links" or click a victim.</li>
+      </ul>
+      <h2>Three questions per attack</h2>
+      <ol>
+        <li><b>Entry:</b> where does attacker-controlled input enter?</li>
+        <li><b>Amplifier:</b> where does a small input turn into large cost?</li>
+        <li><b>Victim:</b> who pays: the provider, co-located tenants, the bill payer, the end user, or a physical system?</li>
+      </ol>
+      <h2>Victim caveat</h2>
+      <p>In direct attacks the attacker sends their own prompt. On a pay-per-token API the attacker pays for it, so the real victims are the provider (on flat-rate, free or self-hosted tiers) and co-located tenants, if the engine's isolation fails. Fill and Squeeze argues continuous batching mostly protects other tenants from long answers, and that their harm comes from KV-cache and scheduler pressure. Injection and agent attacks are different: an innocent party pays.</p>
+      <h2>Sources</h2>
+      <p>Nodes marked "read in full" come from papers read in this folder. The rest are classified from arXiv abstracts; verify them before citing. The repo's 110 entries are included; non-LLM domains appear only in the catalog.</p>
+    </div>
+  </section>
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="repo_catalog.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+const S = window.SECTIONS, A = window.ATTACKS, D = window.DEFENSES, F = window.FAMILIES;
+const sec = Object.fromEntries(S.map(s=>[s.id,s]));
+const fam = Object.fromEntries(F.map(f=>[f.id,f]));
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fcol = id => `var(--${fam[id].color})`;
+const costLbl = {cheap:"cheap at high RPS", moderate:"moderate cost", heavy:"heavy: extra LLM call"};
+const costVar = {cheap:"var(--good)", moderate:"var(--warn)", heavy:"var(--crit)"};
+const advLbl = {yes:"attack-evaluated", partial:"partly evaluated", no:"never attack-evaluated"};
+const srcLbl = {read:"read in full", abs:"abstract only", repo:"repo only, unchecked"};
+const NS = "http://www.w3.org/2000/svg";
+const secLabel = s => s.layer ? `${s.layer} · ${s.kind}` : s.kind;
+const SW = s => s.kind==="victim" ? 200 : 172, SH = s => s.kind==="victim" ? 40 : 46;
+
+// ---------------- theme + tabs
+const tb = document.getElementById("themebtn");
+const curTheme = () => document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+const syncTb = () => tb.textContent = curTheme()==="dark" ? "Light theme" : "Dark theme";
+try{ const t = localStorage.getItem("eco-theme"); if(t) document.documentElement.dataset.theme = t; }catch(e){}
+syncTb();
+tb.onclick = ()=>{ const t = curTheme()==="dark"?"light":"dark"; document.documentElement.dataset.theme = t; try{localStorage.setItem("eco-theme",t)}catch(e){} syncTb(); };
+const tabs = document.querySelectorAll("nav.tabs [role=tab]");
+function showTab(name){
+  tabs.forEach(x=>x.setAttribute("aria-selected", x.dataset.tab===name));
+  document.querySelectorAll("main > section").forEach(s=>s.hidden = s.id !== "tab-"+name);
+  try{localStorage.setItem("eco-tab2", name)}catch(e){}
+}
+tabs.forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+// ---------------- derived: edge weights from attack paths
+const live = A.filter(a=>!a.faint && a.path);
+const ekey = (a,b)=>a+">"+b;
+const edgeType = {}; window.SECTION_EDGES.forEach(e=>edgeType[ekey(e[0],e[1])] = e[2]);
+const weight = {}, usersOf = {};
+live.forEach(a=>{ for(let i=0;i<a.path.length-1;i++){ const k=ekey(a.path[i],a.path[i+1]); weight[k]=(weight[k]||0)+1; (usersOf[k]=usersOf[k]||[]).push(a.id);} });
+const passCount = {}, ampCount = {};
+live.forEach(a=>{ new Set(a.path).forEach(s=>passCount[s]=(passCount[s]||0)+1); a.amp.forEach(s=>ampCount[s]=(ampCount[s]||0)+1); });
+
+// dominant path: max-weight path over flow + load edges (DAG)
+const flowEdges = window.SECTION_EDGES.filter(e=>e[2]==="flow"||e[2]==="load");
+function bestPath(sources){
+  const nodes = [...new Set(flowEdges.flatMap(e=>[e[0],e[1]]))];
+  const indeg = Object.fromEntries(nodes.map(n=>[n,0])); flowEdges.forEach(e=>indeg[e[1]]++);
+  const order=[], q=nodes.filter(n=>indeg[n]===0);
+  while(q.length){ const n=q.shift(); order.push(n); flowEdges.filter(e=>e[0]===n).forEach(e=>{ if(--indeg[e[1]]===0) q.push(e[1]); }); }
+  const best={}, prev={};
+  order.forEach(n=>{ if(!sources || sources.includes(n)) { if(best[n]===undefined) best[n]=0; } });
+  order.forEach(n=>{ if(best[n]===undefined) return; flowEdges.filter(e=>e[0]===n).forEach(e=>{ const w=best[n]+(weight[ekey(e[0],e[1])]||0); if(best[e[1]]===undefined||w>best[e[1]]){best[e[1]]=w;prev[e[1]]=n;} }); });
+  let end=null; for(const n in best) if(end===null||best[n]>best[end]) end=n;
+  const path=[end]; while(prev[path[0]]) path.unshift(prev[path[0]]);
+  return {path, score:best[end]};
+}
+const dom = bestPath(null);
+const domEdges = new Set(dom.path.slice(0,-1).map((n,i)=>ekey(n,dom.path[i+1])));
+const corePath = a => { const p=a.path.slice(); const n=p.length; if(n>1 && edgeType[ekey(p[n-2],p[n-1])]==="loop") p.pop(); return p; };
+const onDom = a => corePath(a).every(s=>dom.path.includes(s));
+const touchesDom = a => a.path.filter(s=>dom.path.includes(s)).length>=2;
+
+// ---------------- stats
+document.getElementById("stats").innerHTML =
+  `<span class="stat"><b>${live.length}</b> attacks on the serving graph</span><span class="stat"><b>${A.length-live.length}</b> faintly related</span><span class="stat"><b>${D.length}</b> defenses</span><span class="stat"><b>${S.filter(s=>s.kind!=="victim").length}</b> sections</span>`;
+
+// ---------------- layout of paper nodes
+const pos = {};
+const famStack = {};
+const faintAnchor = { jail:[1692,652], sidech:[1692,512], dyn:[1692,792] };
+A.forEach(a=>{
+  let base;
+  if(a.family==="faint"){ const k=a.link[0]; base=faintAnchor[k]; famStack[k]=(famStack[k]||0); pos[a.id]=[base[0], base[1]+famStack[k]*20]; famStack[k]++; return; }
+  base = fam[a.family].cluster; famStack[a.family]=(famStack[a.family]||0);
+  pos[a.id]=[base[0], base[1]+famStack[a.family]*20]; famStack[a.family]++;
+});
+const defStack = {};
+D.forEach(d=>{ const b=window.DEF_CLUSTERS[d.cluster]; defStack[d.cluster]=(defStack[d.cluster]||0); pos["d:"+d.id]=[b[0], b[1]+defStack[d.cluster]*20]; defStack[d.cluster]++; });
+
+// ---------------- draw
+const svg = d3.select("#svg").attr("viewBox","0 0 1960 1160");
+const root = svg.append("g");
+const gl = root.append("g"), gse = root.append("g"), gpe = root.append("g"), gs = root.append("g"), gn = root.append("g");
+const laneFill = {agentlane:"var(--lane-a)",trainlane:"var(--lane-t)",spine:"var(--lane-s)",embodied:"var(--lane-e)",related:"var(--lane-r)",victims:"var(--lane-v)"};
+window.LANES.forEach(l=>{
+  const g = gl.append("g");
+  g.append("rect").attr("class","lane-rect").attr("x",l.x).attr("y",l.y).attr("width",l.w).attr("height",l.h).attr("rx",14).attr("fill",laneFill[l.id]);
+  const ty = l.id==="victims" ? l.y+22 : l.y+l.h-30;
+  g.append("text").attr("class","lane-t1").attr("x",l.x+14).attr("y",ty).text(l.name);
+  if(l.sub) g.append("text").attr("class","lane-t2").attr("x",l.x+14).attr("y",ty+16).text(l.sub);
+});
+function anchor(s, px, py){ // point on box border toward (px,py)
+  const w=SW(s)/2, h=SH(s)/2, dx=px-s.x, dy=py-s.y;
+  if(dx===0&&dy===0) return [s.x,s.y];
+  const t = Math.min(Math.abs(w/(dx||1e-9)), Math.abs(h/(dy||1e-9)));
+  return [s.x+dx*t, s.y+dy*t];
+}
+// section edges
+const sedgeEls = {};
+window.SECTION_EDGES.forEach(([a,b,type,label])=>{
+  const s1=sec[a], s2=sec[b], k=ekey(a,b), w=weight[k]||0;
+  let d, mid;
+  if(type==="loop"){
+    const side = b==="exec" ? 1 : -1;
+    const p1 = b==="exec" ? [s1.x+SW(s1)/2, s1.y] : [s1.x-SW(s1)/2, s1.y];
+    const p2 = b==="exec" ? [s2.x+SW(s2)/2, s2.y] : [s2.x+SW(s2)/2, s2.y+8];
+    if(b==="exec"){ d=`M${p1[0]},${p1[1]} C${p1[0]+60},${p1[1]} ${p2[0]+60},${p2[1]} ${p2[0]},${p2[1]}`; mid=[p1[0]+46,(p1[1]+p2[1])/2]; }
+    else { d=`M${p1[0]},${p1[1]} C${p1[0]-160},${p1[1]+40} ${p2[0]+200},${p2[1]+260} ${p2[0]},${p2[1]}`; mid=[(p1[0]+p2[0])/2+40,(p1[1]+p2[1])/2+120]; }
+  } else {
+    const p1=anchor(s1,s2.x,s2.y), p2=anchor(s2,s1.x,s1.y);
+    d=`M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}`; mid=[(p1[0]+p2[0])/2,(p1[1]+p2[1])/2];
+  }
+  const el = gse.append("path").attr("class",`sedge ${type}${type!=="faint"?"":" isfaint"}`).attr("d",d)
+    .attr("stroke-width", type==="faint"?1.2:(1.4+w*0.2)).attr("marker-end", type==="faint"?null:"url(#arrow)");
+  el.node().dataset.k=k; sedgeEls[k]=el;
+  if(w>0){
+    const g=gse.append("g").attr("class","ecount-g"); g.node().dataset.k=k;
+    g.append("rect").attr("class","ecount-bg").attr("x",mid[0]-11).attr("y",mid[1]-8).attr("width",22).attr("height",16).attr("rx",8);
+    g.append("text").attr("class","ecount").attr("x",mid[0]).attr("y",mid[1]+4).attr("text-anchor","middle").text(w);
+  } else if(label){
+    gse.append("text").attr("class","elabel"+(type==="faint"?" isfaint":"")).attr("x",mid[0]+6).attr("y",mid[1]-4).text(label);
+  }
+});
+svg.append("defs").html(`<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="var(--ink-2)"/></marker>`);
+// paper edges
+const pedges = []; // {el, from, to}
+function curve(p, s){
+  const q = anchor(s, p[0], p[1]);
+  const mx = (p[0]+q[0])/2;
+  return `M${p[0]},${p[1]} C${mx},${p[1]} ${mx},${q[1]} ${q[0]},${q[1]}`;
+}
+function addPedge(fromId, p, secId, cls){
+  const el = gpe.append("path").attr("class","pedge "+cls).attr("d",curve(p, sec[secId]));
+  pedges.push({el, from:fromId, to:secId});
+}
+A.forEach(a=>{
+  const p=[pos[a.id][0], pos[a.id][1]];
+  const stroke = a.family==="faint" ? "var(--s0)" : fcol(a.family);
+  if(a.faint){ a.link.forEach(s=>addPedge(a.id,p,s,"faint isfaint")); }
+  else {
+    addPedge(a.id,p,a.path[0],"ent"); a.amp.forEach(s=>{ if(s!==a.path[0]) addPedge(a.id,p,s,"amp"); });
+    (a.related||[]).forEach(s=>addPedge(a.id,p,s,"faint isfaint"));
+  }
+  (a.victims||[]).forEach(v=>addPedge(a.id,p,v,"vic"));
+  pedges.filter(e=>e.from===a.id && !e.el.classed("vic")).forEach(e=>e.el.attr("stroke",stroke));
+});
+D.forEach(d=>{ const p=pos["d:"+d.id]; d.nodes.forEach(s=>addPedge("d:"+d.id,p,s,"def"+(d.fails?" fails":"")+(sec[s].kind==="related"?" isfaint":""))); });
+// section nodes
+const secEls = {};
+S.forEach(s=>{
+  const g = gs.append("g").attr("class",`sec ${s.kind}${s.kind==="related"?" isfaint":""}`).attr("transform",`translate(${s.x-SW(s)/2},${s.y-SH(s)/2})`).attr("tabindex",0).attr("role","button").attr("aria-label",s.name);
+  g.append("rect").attr("width",SW(s)).attr("height",SH(s)).attr("rx",9);
+  g.append("text").attr("class","n").attr("x",10).attr("y",s.kind==="victim"?25:20).text(s.name);
+  if(s.kind!=="victim") g.append("text").attr("class","k").attr("x",10).attr("y",36).text(`${secLabel(s)} · ${passCount[s.id]||0} attacks`);
+  g.on("click",()=>select("s",s.id)).on("keydown",e=>{ if(e.key==="Enter") select("s",s.id); });
+  g.node().dataset.id=s.id; secEls[s.id]=g;
+});
+// attack nodes
+const nodeEls = {};
+A.forEach(a=>{
+  const [x,y]=pos[a.id];
+  const col = a.family==="faint" ? "var(--s0)" : fcol(a.family);
+  const g = gn.append("g").attr("class","node"+(a.faint?" faint isfaint":"")).attr("transform",`translate(${x},${y})`).attr("tabindex",0).attr("role","button").attr("aria-label",a.name);
+  g.append("circle").attr("r",5.5).attr("fill",col).attr("stroke",col);
+  g.append("text").attr("class","nlbl").attr("x",10).attr("y",4).text(a.name);
+  g.on("click",()=>select("a",a.id)).on("keydown",e=>{ if(e.key==="Enter") select("a",a.id); });
+  nodeEls[a.id]=g;
+});
+D.forEach(d=>{
+  const [x,y]=pos["d:"+d.id];
+  const g = gn.append("g").attr("class","node"+(d.nodes.some(s=>sec[s].kind==="related")&&d.nodes.length===1?" isfaint":"")).attr("transform",`translate(${x},${y})`).attr("tabindex",0).attr("role","button").attr("aria-label",d.name);
+  g.append("rect").attr("class","sq").attr("x",-5).attr("y",-5).attr("width",10).attr("height",10).attr("rx",2).attr("stroke",costVar[d.cost]).attr("stroke-dasharray",d.origin==="proposal"?"2.5 2":null);
+  if(d.fails) g.append("text").attr("class","x").attr("x",-4).attr("y",4).text("✗");
+  g.append("text").attr("class","nlbl").attr("x",10).attr("y",4).text(d.name);
+  g.on("click",()=>select("d",d.id)).on("keydown",e=>{ if(e.key==="Enter") select("d",d.id); });
+  nodeEls["d:"+d.id]=g;
+});
+// dominant path glow (under edges)
+const domG = gse.insert("g",":first-child").style("display","none");
+dom.path.slice(0,-1).forEach((n,i)=>{ const s1=sec[n], s2=sec[dom.path[i+1]]; const p1=anchor(s1,s2.x,s2.y), p2=anchor(s2,s1.x,s1.y); domG.append("path").attr("class","domglow").attr("d",`M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}`).attr("stroke-width",26); });
+
+// key row
+document.getElementById("keyrow").innerHTML = `
+  <span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="var(--s2)"/></svg> attack paper</span>
+  <span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="var(--surface)" stroke="var(--s0)" stroke-width="1.6"/></svg> faintly related</span>
+  <span><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" rx="2" fill="var(--surface)" stroke="var(--good)" stroke-width="2"/></svg> defense: cheap</span>
+  <span><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" rx="2" fill="var(--surface)" stroke="var(--warn)" stroke-width="2"/></svg> moderate</span>
+  <span><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" rx="2" fill="var(--surface)" stroke="var(--crit)" stroke-width="2"/></svg> heavy</span>
+  <span><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" rx="2" fill="var(--surface)" stroke="var(--good)" stroke-width="2" stroke-dasharray="2.5 2"/></svg> proposal (untested)</span><span>✗ tested and failed</span>
+  <span><svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--ink-2)" stroke-width="3"/></svg> request flow (width = attack count)</span>
+  <span><svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--ink-2)" stroke-width="1.5" stroke-dasharray="6 4"/></svg> feedback loop</span>
+  <span><svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--line-2)" stroke-width="1.5" stroke-dasharray="3 4"/></svg> faint relation</span>`;
+
+// family filter
+const famOn = new Set(F.map(f=>f.id));
+const ff = document.getElementById("famfilter");
+F.forEach(f=>{
+  const b=document.createElement("button"); b.className="fam"; b.setAttribute("aria-pressed","true"); b.title=f.desc;
+  b.innerHTML=`<span class="dot" style="--c:var(--${f.color})"></span>${esc(f.short)}`;
+  b.onclick=()=>{ famOn.has(f.id)?famOn.delete(f.id):famOn.add(f.id); b.setAttribute("aria-pressed",famOn.has(f.id)); applyFam(); };
+  ff.appendChild(b);
+});
+function applyFam(){
+  A.forEach(a=>{ const on=famOn.has(a.family); nodeEls[a.id].style("display",on?null:"none"); pedges.filter(e=>e.from===a.id).forEach(e=>e.el.style("display",on?null:"none")); });
+}
+// toggles
+const svgEl = document.getElementById("svg");
+function tog(id, fn){ const b=document.getElementById(id); b.onclick=()=>{ const v=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed",v); fn(v); }; }
+tog("tgDom", v=>{ domG.style("display",v?null:"none"); Object.entries(sedgeEls).forEach(([k,el])=>el.classed("dom", v && domEdges.has(k))); });
+tog("tgVic", v=>svgEl.classList.toggle("showvic",v));
+tog("tgFaint", v=>svgEl.classList.toggle("hidefaint",!v));
+tog("tgLbl", v=>svgEl.classList.toggle("nolabels",!v));
+
+// zoom
+const zoom = d3.zoom().scaleExtent([0.25,4]).on("zoom",e=>root.attr("transform",e.transform));
+svg.call(zoom).on("dblclick.zoom",null);
+function fit(){ const box=document.getElementById("graphbox"); const w=box.clientWidth, h=box.clientHeight; const k=Math.min(w/1960,h/1160)*0.98; svg.call(zoom.transform, d3.zoomIdentity.translate((w-1960*k)/2,(h-1160*k)/2).scale(k)); }
+// viewBox scales already; use identity transforms relative to viewBox
+svg.attr("viewBox",null);
+document.getElementById("zin").onclick=()=>svg.transition().duration(200).call(zoom.scaleBy,1.3);
+document.getElementById("zout").onclick=()=>svg.transition().duration(200).call(zoom.scaleBy,1/1.3);
+document.getElementById("zfit").onclick=fit;
+const gbox=document.getElementById("graphbox"), zfull=document.getElementById("zfull");
+const isFull=()=>document.fullscreenElement===gbox || gbox.classList.contains("expanded");
+function syncFull(){ const f=isFull(); zfull.textContent=f?"✕":"⤢"; zfull.setAttribute("aria-label",f?"Exit full screen":"Full screen"); zfull.title=f?"Exit full screen":"Full screen"; document.body.classList.toggle("noscroll",gbox.classList.contains("expanded")); requestAnimationFrame(fit); }
+function setExpanded(v){ gbox.classList.toggle("expanded",v); syncFull(); }
+zfull.onclick=()=>{
+  if(document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); return; }
+  if(gbox.classList.contains("expanded")){ setExpanded(false); return; }
+  const req=gbox.requestFullscreen||gbox.webkitRequestFullscreen;
+  if(req){ try{ const r=req.call(gbox); if(r&&r.catch) r.catch(()=>setExpanded(true)); }catch(e){ setExpanded(true); } } else setExpanded(true);
+};
+document.addEventListener("fullscreenchange",syncFull);
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&gbox.classList.contains("expanded")) setExpanded(false); });
+addEventListener("resize", ()=>{ if(!document.getElementById("tab-graph").hidden) fit(); });
+
+// ---------------- selection
+let sel=null;
+function attacksAt(sid){ return A.filter(a=> a.faint ? (a.link||[]).includes(sid) : (a.path.includes(sid)||a.amp.includes(sid)||(a.related||[]).includes(sid)||(a.victims||[]).includes(sid))); }
+function defsFor(a){ return D.filter(d=>d.covers.includes(a.family) && d.nodes.some(s=>a.faint ? (a.link||[]).includes(s) : (a.path.includes(s)||a.amp.includes(s)))); }
+function attacksFor(d){ return A.filter(a=>d.covers.includes(a.family) && d.nodes.some(s=>a.faint ? (a.link||[]).includes(s) : (a.path.includes(s)||a.amp.includes(s)))); }
+function clearHL(){ svgEl.classList.remove("dim"); svgEl.querySelectorAll(".hl,.sel").forEach(e=>e.classList.remove("hl","sel")); }
+function hlSec(id){ secEls[id]?.classed("hl",true); }
+function hlNode(id){ nodeEls[id]?.classed("hl",true); }
+function hlPedges(pred){ pedges.forEach(e=>{ if(pred(e)) e.el.classed("hl",true); }); }
+function hlPath(path){ path.forEach(hlSec); for(let i=0;i<path.length-1;i++){ const k=ekey(path[i],path[i+1]); sedgeEls[k]?.classed("hl",true); svgEl.querySelectorAll(`.ecount-g`).forEach(g=>{ if(g.dataset.k===k) g.classList.add("hl"); }); } }
+function select(type,id){
+  if(sel && sel.type===type && sel.id===id){ sel=null; clearHL(); renderDetail(); return; }
+  sel={type,id}; clearHL(); svgEl.classList.add("dim");
+  if(type==="a"){
+    const a=A.find(x=>x.id===id); hlNode(a.id); nodeEls[a.id].classed("sel",true);
+    if(a.faint) a.link.forEach(hlSec); else { hlPath(a.path); a.amp.forEach(hlSec); (a.related||[]).forEach(hlSec); }
+    (a.victims||[]).forEach(hlSec);
+    hlPedges(e=>e.from===a.id);
+    defsFor(a).forEach(d=>{ hlNode("d:"+d.id); hlPedges(e=>e.from==="d:"+d.id && (a.faint?a.link:a.path.concat(a.amp)).includes(e.to)); });
+  } else if(type==="d"){
+    const d=D.find(x=>x.id===id); hlNode("d:"+d.id); nodeEls["d:"+d.id].classed("sel",true);
+    d.nodes.forEach(hlSec); hlPedges(e=>e.from==="d:"+d.id);
+    attacksFor(d).forEach(a=>{ hlNode(a.id); hlPedges(e=>e.from===a.id && d.nodes.includes(e.to)); });
+  } else {
+    hlSec(id);
+    const at=attacksAt(id); at.forEach(a=>{ hlNode(a.id); hlPedges(e=>e.from===a.id && e.to===id); });
+    if(sec[id].kind!=="victim"){
+      D.filter(d=>d.nodes.includes(id)).forEach(d=>{ hlNode("d:"+d.id); hlPedges(e=>e.from==="d:"+d.id && e.to===id); });
+      window.SECTION_EDGES.forEach(([x,y])=>{ if(x===id||y===id){ sedgeEls[ekey(x,y)]?.classed("hl",true); hlSec(x); hlSec(y);} });
+    } else { svgEl.classList.add("showvic"); }
+  }
+  renderDetail();
+  if(innerWidth<=1050 && !isFull()) document.getElementById("detail").scrollIntoView({behavior:"smooth",block:"start"});
+}
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&sel){ sel=null; clearHL(); if(document.getElementById("tgVic").getAttribute("aria-pressed")!=="true") svgEl.classList.remove("showvic"); renderDetail(); }});
+
+const pathHTML = (a)=> `<div class="pathviz">${a.path.map((s,i)=>`${i?'<span class="a">→</span>':""}<span class="s${a.amp.includes(s)?" amp":""}">${esc(sec[s].name)}</span>`).join("")}</div>`;
+const pillCost = d=>`<span class="pill ${d.cost==="cheap"?"good":d.cost==="heavy"?"crit":"warn"}">${costLbl[d.cost]}</span>`;
+function renderDetail(){
+  const el=document.getElementById("detail");
+  if(!sel){
+    el.innerHTML = `<h2>Start with a node</h2><p class="meta">Pick a section, attack, defense or victim on the graph.</p>
+      <h3>Dominant attack path</h3><div class="pathviz">${dom.path.map((s,i)=>`${i?'<span class="a">→</span>':""}<span class="s">${esc(sec[s].name)}</span>`).join("")}</div>
+      <p style="margin-top:6px;font-size:13px">${live.filter(touchesDom).length} of ${live.length} serving-graph attacks travel at least one edge of it. Toggle "Dominant attack path" to see it.</p>
+      <h3>Families</h3>${F.map(f=>`<p style="font-size:13px"><span class="dot" style="--c:var(--${f.color});margin-right:6px"></span><b>${esc(f.name)}.</b> ${esc(f.desc)}</p>`).join("")}`;
+    return;
+  }
+  if(sel.type==="a"){
+    const a=A.find(x=>x.id===sel.id), defs=defsFor(a);
+    el.innerHTML = `<h2>${esc(a.name)}</h2>
+      <div class="meta">${esc(a.venue)} ${a.year} · ${esc(a.access)}</div>
+      <div><span class="pill"><span class="dot" style="--c:${a.family==="faint"?"var(--s0)":fcol(a.family)};margin-right:4px"></span>${esc(fam[a.family].short)}</span><span class="pill">${srcLbl[a.src]}</span></div>
+      ${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener">Paper ↗</a>`:""}${a.pdf?` <span class="meta">local: ${esc(a.pdf)}</span>`:""}
+      <h3>How it works</h3><p>${esc(a.mech)}</p>
+      <h3>Reported impact</h3><p>${esc(a.scale)}</p>
+      ${a.faint?`<h3>Faint link to</h3><p>${a.link.map(s=>esc(sec[s].name)).join(", ")}</p>`:`<h3>Path (dashed = amplifies)</h3>${pathHTML(a)}`}
+      <h3>Victims</h3><p>${(a.victims||[]).length?a.victims.map(v=>`<span class="pill crit">${esc(sec[v].name)}</span>`).join(""):"None in the DoS sense"}</p>
+      <h3>Critical note</h3><div class="note">${esc(a.crit)}</div>
+      <h3>Defenses on its path (${defs.length})</h3>
+      <ul class="lst">${defs.map(d=>`<li><button class="linkbtn" data-d="${d.id}">${esc(d.name)}</button> ${d.fails?'<span class="pill crit">failed</span>':""}${pillCost(d)}</li>`).join("")||"<li>None</li>"}</ul>`;
+  } else if(sel.type==="d"){
+    const d=D.find(x=>x.id===sel.id), hits=attacksFor(d);
+    el.innerHTML = `<h2>${esc(d.name)}</h2>
+      <div class="meta">acts on: ${d.nodes.map(s=>esc(sec[s].name)).join(", ")}</div>
+      <div>${pillCost(d)}<span class="pill ${d.adv==="yes"?"good":d.adv==="partial"?"warn":"crit"}">${advLbl[d.adv]}</span><span class="pill">${esc(d.origin)}</span>${d.fails?'<span class="pill crit">tested and failed</span>':""}</div>
+      ${d.url?`<a href="${esc(d.url)}" target="_blank" rel="noopener">Paper ↗</a>`:""}${d.pdf?` <span class="meta">local: ${esc(d.pdf)}</span>`:""}
+      <h3>Mechanism</h3><p>${esc(d.mech)}</p>
+      <h3>Critical note</h3><div class="note">${esc(d.crit)}</div>
+      <h3>Attacks it can reach (${hits.length})</h3>
+      <ul class="lst">${hits.map(a=>`<li><button class="linkbtn" data-a="${a.id}">${esc(a.name)}</button> <span class="pill">${esc(fam[a.family].short)}</span></li>`).join("")||"<li>None. It addresses no cost-DoS family (negative result).</li>"}</ul>`;
+  } else {
+    const s=sec[sel.id], at=attacksAt(s.id), defs=D.filter(d=>d.nodes.includes(s.id));
+    const enter=at.filter(a=>!a.faint && a.path[0]===s.id), amp=at.filter(a=>!a.faint && a.amp.includes(s.id));
+    el.innerHTML = `<h2>${esc(s.name)}</h2><div class="meta">${esc(secLabel(s))}</div>
+      <p>${esc(s.what)}</p>${s.vllm?`<h3>Where in vLLM</h3><p>${esc(s.vllm)}</p>`:""}
+      ${s.kind==="victim"?`<h3>Attacks that hit this victim (${at.length})</h3><ul class="lst">${at.map(a=>`<li><button class="linkbtn" data-a="${a.id}">${esc(a.name)}</button> <span class="pill">${esc(fam[a.family].short)}</span></li>`).join("")}</ul>`:
+      `<p><span class="pill">${passCount[s.id]||0} pass through</span><span class="pill">${enter.length} enter here</span><span class="pill crit">${amp.length} amplify here</span></p>
+      <h3>Amplify here</h3><ul class="lst">${amp.map(a=>`<li><button class="linkbtn" data-a="${a.id}">${esc(a.name)}</button></li>`).join("")||"<li>None</li>"}</ul>
+      <h3>Defenses here (${defs.length})</h3><ul class="lst">${defs.map(d=>`<li><button class="linkbtn" data-d="${d.id}">${esc(d.name)}</button> ${d.fails?'<span class="pill crit">failed</span>':""}${pillCost(d)}</li>`).join("")||"<li>None</li>"}</ul>`}`;
+  }
+  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>select("d",b.dataset.d));
+  el.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>select("a",b.dataset.a));
+}
+renderDetail();
+
+// ---------------- paths tab
+document.getElementById("dompath").innerHTML = `<div class="pathviz">${dom.path.map((s,i)=>`${i?'<span class="a">→</span>':""}<span class="s">${esc(sec[s].name)}</span>`).join("")}</div>
+  <p class="domlist" style="margin-top:8px"><b>${live.filter(onDom).length}</b> attacks run entirely on this path; <b>${live.filter(touchesDom).length}</b> of ${live.length} share at least one edge with it. Defenses on it: ${[...new Set(D.filter(d=>d.nodes.some(n=>dom.path.includes(n))).map(d=>d.name))].length}.</p>
+  <p class="domlist">Fully on path: ${live.filter(onDom).map(a=>esc(a.name)).join(", ")}.</p>
+  <p class="domlist">Off it (other lanes): ${live.filter(a=>!touchesDom(a)).map(a=>esc(a.name)).join(", ")||"none"}.</p>`;
+const chokes = S.filter(s=>s.kind!=="victim" && (passCount[s.id]||ampCount[s.id])).sort((x,y)=>(passCount[y.id]||0)-(passCount[x.id]||0));
+const maxP = Math.max(...chokes.map(s=>passCount[s.id]||0));
+document.getElementById("chokebars").innerHTML = `<div class="bar" style="cursor:default;color:var(--muted);font-size:11px"><span>section</span><span>passes · <span style="color:var(--s2)">amplifies</span></span><span></span></div>` + chokes.map(s=>`<div class="bar" data-s="${s.id}" title="${passCount[s.id]||0} pass, ${ampCount[s.id]||0} amplify"><span>${esc(s.name)}</span><span class="track"><span class="fill" style="width:${(passCount[s.id]||0)/maxP*100}%"></span><span class="fill2" style="width:${(ampCount[s.id]||0)/maxP*100}%"></span></span><span class="num">${passCount[s.id]||0}/${ampCount[s.id]||0}</span></div>`).join("");
+document.querySelectorAll("#chokebars [data-s]").forEach(b=>b.onclick=()=>{ showTab("graph"); fit(); select("s",b.dataset.s); });
+const sources = [...new Set(live.map(a=>a.path[0]))];
+document.getElementById("srcpaths").innerHTML = sources.map(src=>{ const bp=bestPath([src]); const n=live.filter(a=>a.path[0]===src).length; return `<p style="font-size:13px;margin:0 0 4px"><b>${esc(sec[src].name)}</b> · ${n} attack${n>1?"s":""} enter here</p><div class="pathviz" style="margin-bottom:10px">${bp.path.map((s,i)=>`${i?'<span class="a">→</span>':""}<span class="s">${esc(sec[s].name)}</span>`).join("")}</div>`; }).join("");
+document.getElementById("victimlist").innerHTML = S.filter(s=>s.kind==="victim").map(v=>{ const at=A.filter(a=>(a.victims||[]).includes(v.id)); return `<p style="font-size:13px;margin:0 0 2px"><b>${esc(v.name)}</b> · ${at.length}</p><p style="font-size:12.5px;color:var(--ink-2);margin:0 0 10px">${at.map(a=>esc(a.name)).join(", ")}</p>`; }).join("");
+
+// ---------------- coverage
+(function(){
+  const cols=window.COVERAGE_COLS, sym=v=>v===2?"✓ strong":v===1?"◐ partial":"✗ fails";
+  let h=`<thead><tr><th class="fh">Attack family</th>${cols.map(c=>`<th>${esc(sec[c].name)}<br><span style="font-weight:400">${esc(sec[c].layer||"")}</span></th>`).join("")}</tr></thead><tbody>`;
+  F.filter(f=>window.COVERAGE[f.id]).forEach(f=>{ const r=window.COVERAGE[f.id];
+    h+=`<tr><th class="fh"><span class="dot" style="--c:var(--${f.color});margin-right:6px"></span>${esc(f.name)}</th>${cols.map(c=>{ const v=r[c]; return v?`<td class="cell v${v[0]}"><div class="v">${sym(v[0])} <span class="basis">${v[1]}</span></div>${esc(v[2])}</td>`:`<td class="cell"></td>`; }).join("")}</tr>`; });
+  document.getElementById("covtable").innerHTML=h+"</tbody>";
+})();
+
+// ---------------- catalog
+const R = window.REPO || {inference_attacks:[],training_attacks:[],defenses:[]};
+const repoNames = new Set(A.map(a=>a.repo).filter(Boolean));
+const llmRelated = new Set(["NMTSloth","SlowBERT","Slowdown Causes (SaTML)"]);
+const mappedDefs = new Set(["PD3F","Conformal Thinking","TALE (Token-Budget Reasoning)","Concise CoT (CCoT)","CoT-Valve"]);
+const other = [...R.inference_attacks, ...R.training_attacks].filter(r=>!repoNames.has(r.name)).map(r=>({...r,k:"attack"})).concat(R.defenses.filter(r=>!mappedDefs.has(r.name)).map(r=>({...r,k:"defense"})));
+const rows = [
+  ...A.map(a=>({kind:a.faint?"faint":"attack", name:a.name, url:a.url, year:a.year, fam:a.family, secs:a.faint?a.link:[...new Set([...a.path,...a.amp])], where:a.faint?("faint → "+a.link.map(s=>sec[s].name).join(", ")):(sec[a.path[0]].name+" → "+a.amp.map(s=>sec[s].name).join(", ")), info:a.scale, victims:(a.victims||[]).map(v=>sec[v].name).join(", "), note:a.crit, src:a.src, added:!!a.added})),
+  ...D.map(d=>({kind:"defense", name:d.name, url:d.url||"", year:d.year||"", fams:d.covers, secs:d.nodes, where:d.nodes.map(s=>sec[s].name).join(" + "), info:`${costLbl[d.cost]} · ${advLbl[d.adv]}`, victims:"", note:d.crit, src:d.pdf?"read":(d.origin==="security"||d.origin==="efficiency"?"abs":""), added:false})),
+  ...other.map(r=>({kind:"faint", name:r.name, url:r.paper, year:r.year, secs:[], where:llmRelated.has(r.name)?"related LM entry (not mapped)":"other domain", info:`${r.target} (${r.app})`, victims:"", note:r.k==="defense"?("Repo defense: "+r.type):("Repo: "+r.setting), src:"repo", added:false})),
+];
+const ffam=document.getElementById("ffam"), fsec=document.getElementById("fsec");
+F.forEach(f=>ffam.insertAdjacentHTML("beforeend",`<option value="${f.id}">${esc(f.name)}</option>`));
+S.forEach(s=>fsec.insertAdjacentHTML("beforeend",`<option value="${s.id}">${esc(s.name)}</option>`));
+function renderCat(){
+  const q=document.getElementById("q").value.toLowerCase().trim(), k=document.getElementById("fkind").value, fm=ffam.value, sc=fsec.value, sr=document.getElementById("fsrc").value;
+  const out=rows.filter(r=>(!k||r.kind===k)&&(!fm||r.fam===fm||(r.fams||[]).includes(fm))&&(!sc||(r.secs||[]).includes(sc)||r.victims.includes(sec[sc].name))&&(!sr||r.src===sr)&&(!q||(r.name+" "+r.note+" "+r.info).toLowerCase().includes(q)));
+  document.getElementById("catcount").textContent=`${out.length} of ${rows.length} entries`;
+  document.getElementById("cattable").innerHTML=`<thead><tr><th>Kind</th><th>Name</th><th>Year</th><th>Family / covers</th><th>Where</th><th>Victims</th><th>Impact / cost</th><th>Critical note</th></tr></thead><tbody>${out.map(r=>`<tr>
+    <td><span class="kind ${r.kind}">${r.kind}</span></td>
+    <td><b>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a>`:esc(r.name)}</b></td><td>${esc(r.year)}</td>
+    <td style="font-size:12.5px">${r.fam?`<span class="dot" style="--c:${r.fam==="faint"?"var(--s0)":fcol(r.fam)};margin-right:4px"></span>${esc(fam[r.fam].short)}`:(r.fams||[]).map(c=>esc(fam[c].short)).join(", ")}</td>
+    <td style="font-size:12.5px;min-width:160px">${esc(r.where)}</td><td style="font-size:12.5px">${esc(r.victims)}</td>
+    <td style="font-size:12.5px;min-width:160px">${esc(r.info)}</td><td style="font-size:12.5px;min-width:260px">${esc(r.note)}</td></tr>`).join("")}</tbody>`;
+}
+["q","fkind","ffam","fsec","fsrc"].forEach(id=>document.getElementById(id).addEventListener("input",renderCat));
+renderCat();
+
+// restore tab, then fit
+try{ const t=localStorage.getItem("eco-tab2"); if(t && document.getElementById("tab-"+t)) showTab(t); }catch(e){}
+tabs.forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.tab==="graph") requestAnimationFrame(fit); }));
+requestAnimationFrame(fit);
+})();
+</script>
+</body>
+</html>
